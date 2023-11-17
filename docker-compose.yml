@@ -1,0 +1,44 @@
+services:                                 #chính là dịch vụ mà docker cung cấp.
+  db:                                     #Tên của service (đặt thế nào cũng được)
+    image: postgres:latest                #Tên của image mà docker cung cấp (phải đặt đúng) : phiên bản
+    restart: always
+    environment:                          #Môi trường của service đó
+      POSTGRES_USER: 'postgres'           #Username của postgres 
+      POSTGRES_PASSWORD: 'postgres'       #Password của postgres
+    container_name: postgres-nestJS-blogmanagement       #Tên của service được hiển thị bên trong Docker 
+    volumes:                              #Nơi lưu trữ data của service đó
+      - ./src/data/db:/data/db
+      - ./src/data/postgresql:/var/lib/postgresql/data
+    ports:                                
+      - '1234:1234'                       #(port local) : (port container)
+    networks:                             #networks mà service tham gia vào
+      - postgres
+    expose:                               #thông báo cho Docker cho container lắng 
+      - 1234                              #nghe trên các cổng mạng được chỉ định khi chạy
+      
+  pgadmin:
+    user: root
+    image: dpage/pgadmin4:latest
+    restart: always
+    depends_on:                         #Phải service có tên là db phải chạy trước thì sau đó service này mới chạy
+      - db
+    container_name: pgadmin4-nestJS-blogmanagement
+    environment:
+      DB_HOST: 'db'                     #Host của DB là db
+      DB_PORT: 1234                     #Port của DB
+      DB_NAME: 'postgres'               #Tên của DB 
+      DB_USERNAME: 'postgres'           #Username của DB
+      DB_PASSWORD: 'postgres'           #Password của DB
+      PGADMIN_DEFAULT_EMAIL: 'admin@admin.com'    #email mặc định để đăng nhập vào trang pdadmin
+      PGADMIN_DEFAULT_PASSWORD: 'pgadmin4'        #password mặc định để đăng nhập vào trang pdadmin
+    volumes:
+      - ./src/data/pgadmin:/var/lib/pgadmin
+    ports:
+      - '3030:80'
+    networks:
+      - postgres
+
+volumes:                               #khởi tạo volumes
+  db: {}
+networks:                              #khởi tạo networks
+  postgres:
