@@ -5,6 +5,8 @@ import { GetBlogsFilterDto } from './dto/get-blogs-filter.dto';
 import { Blog } from './blog.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DeleteResult, Repository } from 'typeorm';
+import { User } from 'src/auth/user.entity';
+import { getUser } from 'src/auth/dto/get-user.decorator';
 
 @Injectable()
 export class BlogsService {
@@ -44,7 +46,7 @@ export class BlogsService {
   //   return blog;
   // }
 
-  async createBlogs(CreateBlogDto: CreateBlogDto): Promise<Blog> {
+  async createBlogs(CreateBlogDto: CreateBlogDto, user: User): Promise<Blog> {
     const { author, title, description } = CreateBlogDto;
 
     const blog = this.blogsRepository.create({
@@ -53,6 +55,7 @@ export class BlogsService {
       description,
       status: BlogStatus.PUBLIC,
       time: new Date(),
+      user,
     });
 
     await this.blogsRepository.save(blog);
@@ -63,49 +66,64 @@ export class BlogsService {
   //   return blog;
   // }
 
-  async deleteBlog(id: string): Promise<DeleteResult> {
-    const result = await this.blogsRepository.delete(id);
+  // async deleteBlog(id: string, user: User): Promise<DeleteResult> {
+  //   const result = await this.blogsRepository.delete(id, user);
+
+  //   if (result.affected === 0) {
+  //     throw new NotFoundException(`Task with id:"${id}" not found`);
+  //   }
+
+  //   return result;
+  // }
+
+  async getBlog(id: string, user: User): Promise<Blog> {
+    const found = this.blogsRepository.findOne({
+      where: {
+        id: id,
+        user: user,
+      },
+    });
+    if (!found) {
+      throw new NotFoundException(`Blog with "${id}" not found! `);
+    }
+    return found;
+  }
+
+  async deleteBlog(id: string, user: User): Promise<DeleteResult> {
+    const result = await this.blogsRepository.delete({ id, user });
 
     if (result.affected === 0) {
-      throw new NotFoundException(`Task with id:"${id}" not found`);
+      throw new NotFoundException(`Task with ID "${id}" not found`);
     }
 
     return result;
   }
 
-  async updateBlogStatus(id: string, status: BlogStatus): Promise<Blog> {
-    const blog = await this.getBlogById(id);
+  async updateBlogStatus(
+    id: string,
+    status: BlogStatus,
+    @getUser() user: User,
+  ): Promise<Blog> {
+    const blog = await this.getBlog(id, user);
     blog.status = status;
     await this.blogsRepository.save(blog);
 
     return blog;
   }
 
-  // getBlogsWithFilter(filterDto: GetBlogsFilterDto): Blog[] {
-  //   const { status, search } = filterDto;
-
-  //   let blogs = this.getBlogs();
-
-  //   if (status) {
-  //     blogs = blogs.filter((blog) => blog.status === status);
-  //   }
-
-  //   if (search) {
-  //     blogs = blogs.filter((blog) => {
-  //       if (blog.title.includes(search) || blog.description.includes(search)) {
-  //         return true;
-  //       }
-  //       return false;
-  //     });
-  //   }
-  //   return blogs;
-  // }
-
-  async getBlogs({ status, search }: GetBlogsFilterDto): Promise<Blog[]> {
+  async getBlogs(
+    { status, search }: GetBlogsFilterDto,
+    user: User,
+  ): Promise<Blog[]> {
     const query = this.blogsRepository.createQueryBuilder('blog');
+    query.where({
+      user,
+    });
 
     if (status) {
-      query.andWhere('blog.status = :status', { status });
+      {
+        query.andWhere('blog.status = :status', { status });
+      }
     }
 
     if (search) {
@@ -115,7 +133,7 @@ export class BlogsService {
       );
     }
 
-    const tasks = await query.getMany();
-    return tasks;
+    const blogs = await query.getMany();
+    return blogs;
   }
 }

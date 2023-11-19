@@ -10,11 +10,11 @@ services:                                 #chính là dịch vụ mà docker cun
       - ./src/data/db:/data/db
       - ./src/data/postgresql:/var/lib/postgresql/data
     ports:                                
-      - '1234:1234'                       #(port local) : (port container)
+      - '5432:5432'                       #(port local) : (port container)
     networks:                             #networks mà service tham gia vào
       - postgres
     expose:                               #thông báo cho Docker cho container lắng 
-      - 1234                              #nghe trên các cổng mạng được chỉ định khi chạy
+      - 5432                              #nghe trên các cổng mạng được chỉ định khi chạy
       
   pgadmin:
     user: root
@@ -25,7 +25,7 @@ services:                                 #chính là dịch vụ mà docker cun
     container_name: pgadmin4-nestJS-blogmanagement
     environment:
       DB_HOST: 'db'                     #Host của DB là db
-      DB_PORT: 1234                     #Port của DB
+      DB_PORT: 5432                     #Port của DB
       DB_NAME: 'postgres'               #Tên của DB 
       DB_USERNAME: 'postgres'           #Username của DB
       DB_PASSWORD: 'postgres'           #Password của DB
