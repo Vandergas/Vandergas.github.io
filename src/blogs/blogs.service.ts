@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { BlogStatus } from './blog-status-enum';
 import { CreateBlogDto } from './dto/create-blog.dto';
-import { GetBlogsFilterDto } from './dto/get-blogs-filter.dto';
 import { Blog } from './blog.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DeleteResult, Repository } from 'typeorm';
@@ -13,6 +12,8 @@ export class BlogsService {
   constructor(
     @InjectRepository(Blog)
     private blogsRepository: Repository<Blog>,
+    @InjectRepository(User)
+    private usersRepository: Repository<User>,
   ) {}
 
   // getBlogs(): Blog[] {
@@ -89,11 +90,34 @@ export class BlogsService {
     return found;
   }
 
+  async GetUserBlogs(user: User, username: string): Promise<Blog[]> {
+    if (user.username === username) {
+      const blogs = await this.blogsRepository.find({
+        where: {
+          user,
+        },
+      });
+      return blogs;
+    }
+    const usernameblogs = await this.usersRepository.findOneBy({ username });
+    if (user.username !== username) {
+      const blogs = await this.blogsRepository.find({
+        where: {
+          status: BlogStatus.PUBLIC,
+          user: usernameblogs,
+        },
+      });
+      return blogs;
+    }
+  }
+
   async deleteBlog(id: string, user: User): Promise<DeleteResult> {
     const result = await this.blogsRepository.delete({ id, user });
 
     if (result.affected === 0) {
-      throw new NotFoundException(`Task with ID "${id}" not found`);
+      throw new NotFoundException(
+        `Task with ID "${id}" not found or you do not have permission to delete this blog`,
+      );
     }
 
     return result;
@@ -111,29 +135,12 @@ export class BlogsService {
     return blog;
   }
 
-  async getBlogs(
-    { status, search }: GetBlogsFilterDto,
-    user: User,
-  ): Promise<Blog[]> {
-    const query = this.blogsRepository.createQueryBuilder('blog');
-    query.where({
-      user,
+  async getBlogs(): Promise<Blog[]> {
+    const blogs = await this.blogsRepository.find({
+      where: {
+        status: BlogStatus.PUBLIC,
+      },
     });
-
-    if (status) {
-      {
-        query.andWhere('blog.status = :status', { status });
-      }
-    }
-
-    if (search) {
-      query.andWhere(
-        'LOWER(blog.title) LIKE LOWER(:search) OR LOWER(blog.description) LIKE LOWER(:search) OR LOWER(blog.author) LIKE LOWER(:search)',
-        { search: `%${search}%` },
-      );
-    }
-
-    const blogs = await query.getMany();
     return blogs;
   }
 }

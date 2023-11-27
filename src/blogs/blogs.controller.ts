@@ -6,7 +6,7 @@ import {
   Param,
   Patch,
   Post,
-  Query,
+  //Query,
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
@@ -16,7 +16,6 @@ import { CreateBlogDto } from './dto/create-blog.dto';
 // import { GetBlogsFilterDto } from './dto/get-blogs-filter.dto';
 import { UpdateBlogStatusDto } from './dto/update-blog-status.dto';
 import { DeleteResult } from 'typeorm';
-import { GetBlogsFilterDto } from './dto/get-blogs-filter.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { getUser } from 'src/auth/dto/get-user.decorator';
 import { User } from 'src/auth/user.entity';
@@ -27,11 +26,16 @@ export class BlogsController {
   constructor(private blogsService: BlogsService) {}
 
   @Get()
-  getBlogs(
-    @Query() filterDto: GetBlogsFilterDto,
+  getBlogs(): Promise<Blog[]> {
+    return this.blogsService.getBlogs();
+  }
+
+  @Get('/getUserBlogs/:username')
+  getUserBlogs(
     @getUser() user: User,
+    @Param('username') username: string,
   ): Promise<Blog[]> {
-    return this.blogsService.getBlogs(filterDto, user);
+    return this.blogsService.GetUserBlogs(user, username);
   }
 
   @Post()
